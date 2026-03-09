@@ -1,6 +1,10 @@
 import express from "express";
 import cors from "cors";
 import multer from "multer";
+import fs from "fs";
+import pdfParse from "pdf-parse";
+// const pdfParse=require("pdf-parse")
+// import * as pdfParse from "pdf-parse";
 
 const app=express();
 app.use(express.json());
@@ -15,12 +19,22 @@ app.get("/",(req,res)=>{
 })
 
 
-app.post("/upload",upload.single("file"),(req,res)=>{
+app.post("/upload",upload.single("file"),async (req,res)=>{
 
-    console.log(req.file);
+    // console.log(req.file);
+    const filePath= req.file?.path
+
+    if(!filePath){
+        res.status(400).json({message:"No file uploaded"})
+        return;
+    }
+
+    const pdfBuffer= fs.readFileSync(filePath);
+    const pdfData=await pdfParse(pdfBuffer);
 
     res.json({
         message:"File uploaded successfully",
+        content: pdfData.text.slice(0,500),
         file:req.file
     })
 
