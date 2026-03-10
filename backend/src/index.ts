@@ -3,8 +3,7 @@ import cors from "cors";
 import multer from "multer";
 import fs from "fs";
 import pdfParse from "pdf-parse";
-// const pdfParse=require("pdf-parse")
-// import * as pdfParse from "pdf-parse";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 const app=express();
 app.use(express.json());
@@ -31,6 +30,12 @@ app.post("/upload",upload.single("file"),async (req,res)=>{
 
     const pdfBuffer= fs.readFileSync(filePath);
     const pdfData=await pdfParse(pdfBuffer);
+    const splitter= new RecursiveCharacterTextSplitter({chunkSize:1000,chunkOverlap:200});
+    const chunks=await splitter.splitText(pdfData.text);
+
+    console.log("total chunks", chunks.length);
+    console.log("First chunk",chunks[0]);
+
 
     res.json({
         message:"File uploaded successfully",
