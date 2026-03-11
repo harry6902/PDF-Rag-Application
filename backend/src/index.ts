@@ -22,6 +22,23 @@ app.use(express.json());
 app.use(cors());
 
 
+async function initVectorDB(){
+    const collections= await qdrant.getCollections();
+    const checkCollection= collections.collections.find(c=> c.name==="documents");
+
+    if(!checkCollection){
+        await qdrant.createCollection("documents", {
+            vectors:{
+                size:1538,
+                distance:"Cosine"
+            }
+
+        })
+    }
+
+
+}
+
 
 const upload=multer({dest:"uploads/"});
 
@@ -34,57 +51,59 @@ app.get("/",(req,res)=>{
 app.post("/upload",upload.single("file"),async (req,res)=>{
 
     // console.log(req.file);
-    const filePath= req.file?.path
+  try {
+      const filePath= req.file?.path
+  
+      if(!filePath){
+          res.status(400).json({message:"No file uploaded"})
+          return;
+      }
+  
+      const pdfBuffer= fs.readFileSync(filePath);
+      const pdfData=await pdfParse(pdfBuffer);
+      const splitter= new RecursiveCharacterTextSplitter({chunkSize:1000,chunkOverlap:200});
+      const chunks=await splitter.splitText(pdfData.text);
+  
+      
+      const embeddings = await Promise.all(
+          chunks.map(async (chunk)=>{
+              const response= await openai.embeddings.create({
+                  model:"text-embedding-3-small",
+                  input:chunk
+              });
+              return {
+                  text: chunk,
+                  embedding: response.data[0].embedding,
+                };
+          })
+      )
+  
+      await initVectorDB();
+  
+      await qdrant.upsert("documents", {
+          points: embeddings.map((item, index) => 
+          ( {
+            id: index,
+            vector: item.embedding,
+            payload: {
+              text: item.text
+            }
+          }))
+        });
+  
+  
+      res.json({
+          message:"File uploaded successfully",
+          content: pdfData.text.slice(0,500),
+          file:req.file
+      })
+  } catch (error) {
 
-    if(!filePath){
-        res.status(400).json({message:"No file uploaded"})
-        return;
-    }
-
-    const pdfBuffer= fs.readFileSync(filePath);
-    const pdfData=await pdfParse(pdfBuffer);
-    const splitter= new RecursiveCharacterTextSplitter({chunkSize:1000,chunkOverlap:200});
-    const chunks=await splitter.splitText(pdfData.text);
-
+            res.status(500).json({
+                message:"Upload failed!!"
+            })
     
-    const embeddings = await Promise.all(
-        chunks.map(async (chunk)=>{
-            const response= await openai.embeddings.create({
-                model:"text-embedding-3-small",
-                input:chunk
-            });
-            return {
-                text: chunk,
-                embedding: response.data[0].embedding,
-              };
-        })
-    )
-
-    await qdrant.createCollection("documents",{
-        vectors:{
-            size:1536,
-            distance:"Cosine"
-        }
-        
-    })
-
-    await qdrant.upsert("documents", {
-        points: embeddings.map((item, index) => 
-        ( {
-          id: index,
-          vector: item.embedding,
-          payload: {
-            text: item.text
-          }
-        }))
-      });
-
-
-    res.json({
-        message:"File uploaded successfully",
-        content: pdfData.text.slice(0,500),
-        file:req.file
-    })
+  }
 
 })
 
@@ -107,7 +126,7 @@ app.post("/query",async (req,res)=>{
 
     const searchResults=  await qdrant.search("documents",{
         vector:embeddingsResponse.data[0].embedding,
-        limit:3
+        limit:5
     })
 
     if(!searchResults){
@@ -117,7 +136,7 @@ app.post("/query",async (req,res)=>{
         return;
     }
 
-    const context= searchResults.map(r => r.payload!.text).join("\n\n")
+    const context= searchResults.slice(0,3).map(r => r.payload!.text).join("\n\n")
 
     const completion= await openai.chat.completions.create({
         model:"gpt-4o-mini",
