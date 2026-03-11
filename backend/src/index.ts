@@ -3,42 +3,20 @@ import cors from "cors";
 import multer from "multer";
 import fs from "fs";
 import pdfParse from "pdf-parse";
-import OpenAI from "openai";
 import dotenv from "dotenv"
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { QdrantClient } from "@qdrant/js-client-rest";
 import { queryBody } from "../types";
+import { generateEmbedding,questionEmbeddings } from "./services/embedding.service";
+import { storeEmbeddinngs,initVectorDB, searchEmbeddings } from "./services/vector.service";
+import { answerQuery } from "./services/llm.service";
 
 
 dotenv.config({override:true});
 const app=express();
-const openai= new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!
-})
-const qdrant= new QdrantClient({
-    url:"http://localhost:6333"
-})
+
+
 app.use(express.json());
 app.use(cors());
-
-
-async function initVectorDB(){
-    const collections= await qdrant.getCollections();
-    const checkCollection= collections.collections.find(c=> c.name==="documents");
-
-    if(!checkCollection){
-        await qdrant.createCollection("documents", {
-            vectors:{
-                size:1538,
-                distance:"Cosine"
-            }
-
-        })
-    }
-
-
-}
-
 
 const upload=multer({dest:"uploads/"});
 
@@ -63,34 +41,8 @@ app.post("/upload",upload.single("file"),async (req,res)=>{
       const pdfData=await pdfParse(pdfBuffer);
       const splitter= new RecursiveCharacterTextSplitter({chunkSize:1000,chunkOverlap:200});
       const chunks=await splitter.splitText(pdfData.text);
-  
-      
-      const embeddings = await Promise.all(
-          chunks.map(async (chunk)=>{
-              const response= await openai.embeddings.create({
-                  model:"text-embedding-3-small",
-                  input:chunk
-              });
-              return {
-                  text: chunk,
-                  embedding: response.data[0].embedding,
-                };
-          })
-      )
-  
-      await initVectorDB();
-  
-      await qdrant.upsert("documents", {
-          points: embeddings.map((item, index) => 
-          ( {
-            id: index,
-            vector: item.embedding,
-            payload: {
-              text: item.text
-            }
-          }))
-        });
-  
+      const embeddings= await generateEmbedding(chunks);
+      await storeEmbeddinngs(embeddings);
   
       res.json({
           message:"File uploaded successfully",
@@ -118,17 +70,8 @@ app.post("/query",async (req,res)=>{
         })
         return;
     }
-
-    const embeddingsResponse= await openai.embeddings.create({
-        model:"text-embedding-3-small",
-        input:data.question
-    })
-
-    const searchResults=  await qdrant.search("documents",{
-        vector:embeddingsResponse.data[0].embedding,
-        limit:5
-    })
-
+    const embeddingsResponse= await questionEmbeddings(data.question);
+    const searchResults=  await searchEmbeddings(embeddingsResponse.data[0].embedding);
     if(!searchResults){
         res.json({
             message:"No matter related to question"
@@ -137,29 +80,17 @@ app.post("/query",async (req,res)=>{
     }
 
     const context= searchResults.slice(0,3).map(r => r.payload!.text).join("\n\n")
-
-    const completion= await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        messages:[
-            {
-                role:"system",
-                content:"Answer the qyestion based on context provided"
-            },
-            {
-                role:"user",
-                content:`
-                Context:${context},
-                Question:${data.question}
-                
-                `
-            }
-        ]
-    })
-
+    const answer= await answerQuery(context,data.question);
     res.json({
-      answer: completion.choices[0].message.content
+      answer
     })
 })
-app.listen(5001,()=>{
-    console.log("Server is running on port 5000")
-})
+
+
+async function startServer(){
+    await initVectorDB();
+    app.listen(5000,()=>{
+        console.log("Server is running on port 5000")
+    })
+}
+startServer();
