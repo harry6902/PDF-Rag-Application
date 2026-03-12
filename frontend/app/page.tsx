@@ -1,65 +1,123 @@
-import Image from "next/image";
+"use client"
 
+import { ChangeEvent, useState, useRef } from "react";
+import axios from "axios";
 export default function Home() {
+
+
+  const [fileUploaded,setFileUploaded]= useState(false);
+  const [loader,setLoader]=useState(false);
+  const fileRef= useRef<HTMLInputElement>(null)
+  const [question,setQuestion]= useState("");
+  const [showAnswer,setShowAnswer]= useState(false);
+  const [answer,setAnswer]= useState("");
+  const [loader2,setLoader2]= useState(false);
+  function handleUploadFile(){
+ 
+    if(!fileRef.current){
+      return;
+    }
+    fileRef.current.click()
+    
+  }
+
+  async function handleSubmit(){
+    setLoader2(true);
+    const response= await axios.post("http://localhost:5000/query",{
+      question:question
+    }
+  )
+    setAnswer(response.data.answer);
+
+  setLoader2(false);
+  setShowAnswer(true);
+
+  }
+
+  async function handleFile(e: ChangeEvent<HTMLInputElement>){
+    setLoader(true);
+    const files=e.target.files;
+    if(!files){
+      return;
+    }
+    const file=files[0];
+    const formData= new FormData();
+    formData.append("file",file);
+
+    const response= await axios.post("http://localhost:5000/upload",formData);
+
+    console.log(response.data);
+    setFileUploaded(true);
+    setLoader(false);
+
+
+  
+
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+  <div className="flex flex-col gap-10 justify-center items-center h-screen">
+
+    <input ref={fileRef} onChange={(e)=>handleFile(e)} className="hidden" type="file" name="file" id="actualbutton" />
+    <div  onClick={handleUploadFile}  className="flex justify-center items-center gap-4 cursor-pointer" id="proxybutton">
+    <div className="h-12 w-12">
+    <svg viewBox="0 0 24 24" fill="white">
+    <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM13 9V3.5L18.5 9H13Z"/>
+  </svg>
+  </div>
+    {(!loader && !fileUploaded) &&
+    <div className="font-bold">
+      Click here to upload File
+      </div>
+   }
+   {(!loader && fileUploaded) &&
+    <div className="font-bold">
+      File Uploaded Successfully!!! Ask Your questions
+      </div>
+   }
+   {(loader) &&
+   <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin">
+
+   </div>
+    
+   }
+
+  
+  </div>
+  <div>
+  {
+    (!loader && fileUploaded) &&
+
+    <div>
+      <input className="text-gray-300 bg-gray-700 w-[30vw] h-10 p-3"
+      value={question}
+      onKeyDown={(e)=>{
+        if(e.key==="Enter"){
+          handleSubmit();
+        }
+      }}
+      onChange={(e)=>{setQuestion(e.target.value)}}
+      placeholder="Ask your question here" type="text" name="" id="" />
     </div>
+   }
+   </div>
+   <div>
+    {(loader2) && 
+
+    <div className="h-6 w-6 border-3 border-white border-t-transparent rounded-full animate-spin">
+
+    </div>
+
+    }
+    {(showAnswer && !loader2)&&
+    <div className="w-[40vw]">
+      {answer}
+
+    </div>
+      
+    }
+   </div>
+
+  </div>
   );
 }

@@ -15,7 +15,17 @@ export async function answerQuery(context:string,question:string){
         messages:[
             {
                 role:"system",
-                content:`Answer the question based on context provided. Don't show "\n" and "\n\n" in the respose as it is just a line separation`
+                content:`
+                You are a helpful AI assistant which helps in answering questions
+                Answer the question based on context provided. Don't show "\n" and "\n\n" in the respose as it is just a line separation.
+                
+                Use only provided context to answer the questions
+
+                If any information is asked which is not related to contest, respond with:
+                "I could not find answer in the document"
+                Be concise and clear 
+                
+                `
             },
             {
                 role:"user",

@@ -79,7 +79,9 @@ app.post("/query",async (req,res)=>{
         return;
     }
 
-    const context= searchResults.slice(0,3).map(r => r.payload!.text).join("\n\n")
+    const context= searchResults.slice(0,3).map((r,i) => `Source ${i+1}: ${r.payload!.text}`).join("\n\n")
+    
+    
     const answer= await answerQuery(context,data.question);
     res.json({
       answer
