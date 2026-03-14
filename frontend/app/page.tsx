@@ -2,6 +2,11 @@
 
 import { ChangeEvent, useState, useRef } from "react";
 import axios from "axios";
+
+interface MessageType{
+  role:"user" | "assistant";
+  message: string
+}
 export default function Home() {
 
 
@@ -12,6 +17,7 @@ export default function Home() {
   const [showAnswer,setShowAnswer]= useState(false);
   const [answer,setAnswer]= useState("");
   const [loader2,setLoader2]= useState(false);
+  const [messages,setMessages]= useState<MessageType[]>([]);
   function handleUploadFile(){
  
     if(!fileRef.current){
@@ -23,14 +29,19 @@ export default function Home() {
 
   async function handleSubmit(){
     setLoader2(true);
+    setMessages((prev)=>[...prev,{role:"user",message:question}]);
+    setQuestion("");
     const response= await axios.post("http://localhost:5000/query",{
       question:question
-    }
-  )
+    })
+   
+    setMessages((prev)=>[...prev,{role:"assistant",message:response.data.answer}])
+
     setAnswer(response.data.answer);
 
   setLoader2(false);
   setShowAnswer(true);
+  console.log(messages)
 
   }
 
@@ -45,8 +56,6 @@ export default function Home() {
     formData.append("file",file);
 
     const response= await axios.post("http://localhost:5000/upload",formData);
-
-    console.log(response.data);
     setFileUploaded(true);
     setLoader(false);
 
@@ -56,11 +65,11 @@ export default function Home() {
   }
 
   return (
-  <div className="flex flex-col gap-10 justify-center items-center h-screen">
+  <div className="flex flex-col gap-10 items-center min-h-screen]">
 
     <input ref={fileRef} onChange={(e)=>handleFile(e)} className="hidden" type="file" name="file" id="actualbutton" />
-    <div  onClick={handleUploadFile}  className="flex justify-center items-center gap-4 cursor-pointer" id="proxybutton">
-    <div className="h-12 w-12">
+    <div  onClick={handleUploadFile}  className={"flex justify-center items-center gap-4 cursor-pointer mt-[20vh]"} id="proxybutton">
+    <div className={"h-12 w-12"+(fileUploaded  ? 'mt-[-20vh]':'')}>
     <svg viewBox="0 0 24 24" fill="white">
     <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM13 9V3.5L18.5 9H13Z"/>
   </svg>
@@ -71,7 +80,7 @@ export default function Home() {
       </div>
    }
    {(!loader && fileUploaded) &&
-    <div className="font-bold">
+    <div className="font-bold mt-[-30vh]">
       File Uploaded Successfully!!! Ask Your questions
       </div>
    }
@@ -88,7 +97,7 @@ export default function Home() {
   {
     (!loader && fileUploaded) &&
 
-    <div>
+    <div className="fixed bottom-10 left-0 w-full flex justify-center">
       <input className="text-gray-300 bg-gray-700 w-[30vw] h-10 p-3"
       value={question}
       onKeyDown={(e)=>{
@@ -101,22 +110,36 @@ export default function Home() {
     </div>
    }
    </div>
-   <div>
-    {(loader2) && 
-
-    <div className="h-6 w-6 border-3 border-white border-t-transparent rounded-full animate-spin">
-
-    </div>
-
-    }
-    {(showAnswer && !loader2)&&
-    <div className="w-[40vw]">
-      {answer}
+   <div className="mt-[-15vh]">
+    
+    {(messages.length>0)&&
+    <div className="w-[40vw] flex flex-col gap-2">
+      
+      {
+        messages.map((item,index)=>(
+          <div key={index}>
+            <p className={`w-fit px-4 py-2 rounded-lg 
+  ${item.role==="user" ? "bg-gray-700 ml-auto" : ""}
+`}>
+  {item.message}
+</p>
+          </div>
+        ))
+      }
 
     </div>
       
     }
    </div>
+   {loader2 && (
+  <div className="flex my-2">
+    <div className="bg-gray-800 px-4 py-2 rounded-lg w-fit flex gap-1">
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+    </div>
+  </div>
+)}
 
   </div>
   );
