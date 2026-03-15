@@ -31,7 +31,9 @@ export async function storeEmbeddinngs(embeddings: any[]){
          points: embeddings.map((item,index)=>({
              id:index,
              payload:{
-                 text:item.text
+                 text:item.text,
+                 page: item.page,
+                 fileName: item.fileName
              },
              vector:item.embedding
          }

@@ -26,28 +26,33 @@ app.get("/",(req,res)=>{
 })
 
 
-app.post("/upload",upload.single("file"),async (req,res)=>{
+app.post("/upload",upload.array("files"),async (req,res)=>{
 
     // console.log(req.file);
   try {
-      const filePath= req.file?.path
+      const files= req.files as Express.Multer.File[];
   
-      if(!filePath){
+      if(!files){
           res.status(400).json({message:"No file uploaded"})
           return;
       }
   
-      const pdfBuffer= fs.readFileSync(filePath);
+      for(const file of files){
+      const pdfBuffer= fs.readFileSync(file.path);
       const pdfData=await pdfParse(pdfBuffer);
       const splitter= new RecursiveCharacterTextSplitter({chunkSize:1000,chunkOverlap:200});
-      const chunks=await splitter.splitText(pdfData.text);
-      const embeddings= await generateEmbedding(chunks);
+    //   const chunks=await splitter.splitText(pdfData.text);
+      const chunks=await splitter.createDocuments(
+        [pdfData.text],
+        [{page:1}]
+      )
+      const embeddings= await generateEmbedding(chunks,file.originalname);
+ 
       await storeEmbeddinngs(embeddings);
-  
+      }
       res.json({
-          message:"File uploaded successfully",
-          content: pdfData.text.slice(0,500),
-          file:req.file
+          message:"Files uploaded successfully",
+         
       })
   } catch (error) {
 
@@ -72,20 +77,22 @@ app.post("/query",async (req,res)=>{
     }
     const embeddingsResponse= await questionEmbeddings(data.question);
     const searchResults=  await searchEmbeddings(embeddingsResponse.data[0].embedding);
+
     if(!searchResults){
         res.json({
             message:"No matter related to question"
         })
         return;
     }
+  
+    const context= searchResults.slice(0,3).map((r,i) => `Source ${i+1} Doccument Name: ${r.payload?.fileName} \n 
+    Page ${r.payload?.page}: \n
+    ${r.payload?.text}`).join("\n\n")
 
-    const context= searchResults.slice(0,3).map((r,i) => `Source ${i+1}: ${r.payload!.text}`).join("\n\n")
+   
     
-    
-    const answer= await answerQuery(context,data.question);
-    res.json({
-      answer
-    })
+    const answer= await answerQuery(context,data.question,res);
+  
 })
 
 

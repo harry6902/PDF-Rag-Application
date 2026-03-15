@@ -1,6 +1,6 @@
 "use client"
 
-import { ChangeEvent, useState, useRef } from "react";
+import { ChangeEvent, useState, useRef, useEffect } from "react";
 import axios from "axios";
 
 interface MessageType{
@@ -12,12 +12,20 @@ export default function Home() {
 
   const [fileUploaded,setFileUploaded]= useState(false);
   const [loader,setLoader]=useState(false);
-  const fileRef= useRef<HTMLInputElement>(null)
+  const fileRef= useRef<HTMLInputElement>(null);
+  const messagesRef=useRef<HTMLDivElement>(null);
   const [question,setQuestion]= useState("");
   const [showAnswer,setShowAnswer]= useState(false);
   const [answer,setAnswer]= useState("");
   const [loader2,setLoader2]= useState(false);
   const [messages,setMessages]= useState<MessageType[]>([]);
+  
+  useEffect(() => {
+      
+    messagesRef.current?.scrollIntoView({behavior:"smooth",block:"end"})
+  }, [messages])
+  
+  
   function handleUploadFile(){
  
     if(!fileRef.current){
@@ -31,17 +39,39 @@ export default function Home() {
     setLoader2(true);
     setMessages((prev)=>[...prev,{role:"user",message:question}]);
     setQuestion("");
-    const response= await axios.post("http://localhost:5000/query",{
-      question:question
+    const response= await fetch("http://localhost:5000/query",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({question})
     })
-   
-    setMessages((prev)=>[...prev,{role:"assistant",message:response.data.answer}])
 
-    setAnswer(response.data.answer);
+    const reader=response.body?.getReader();
+    const decoder= new TextDecoder();
+    let result="";
+    while(true){
+      const {done,value}=await reader!.read();
+      if(done)break;
+      const chunk=decoder.decode(value);
+      result+=chunk;
+      setMessages((prev)=>{
+        const last= prev[prev.length-1];
+        if(last?.role==="assistant"){
+          last.message=result;
+          return [...prev];
+        }
+        return [...prev,{role:"assistant",message:result}]
+      })
+    }
+   
+    // setMessages((prev)=>[...prev,{role:"assistant",message:response.data.answer}])
+
+    // setAnswer(response.data.answer);
 
   setLoader2(false);
   setShowAnswer(true);
-  console.log(messages)
+  
 
   }
 
@@ -51,9 +81,12 @@ export default function Home() {
     if(!files){
       return;
     }
-    const file=files[0];
+   
     const formData= new FormData();
-    formData.append("file",file);
+  for(const file of files){
+    formData.append("files",file);
+  }
+   
 
     const response= await axios.post("http://localhost:5000/upload",formData);
     setFileUploaded(true);
@@ -65,9 +98,9 @@ export default function Home() {
   }
 
   return (
-  <div className="flex flex-col gap-10 items-center min-h-screen]">
+  <div className="flex flex-col gap-10 items-center">
 
-    <input ref={fileRef} onChange={(e)=>handleFile(e)} className="hidden" type="file" name="file" id="actualbutton" />
+    <input ref={fileRef} multiple onChange={(e)=>handleFile(e)} className="hidden" type="file" name="file" id="actualbutton" />
     <div  onClick={handleUploadFile}  className={"flex justify-center items-center gap-4 cursor-pointer mt-[20vh]"} id="proxybutton">
     <div className={"h-12 w-12"+(fileUploaded  ? 'mt-[-20vh]':'')}>
     <svg viewBox="0 0 24 24" fill="white">
@@ -94,7 +127,48 @@ export default function Home() {
   
   </div>
   <div>
-  {
+
+   </div>
+   <div    className="h-screen flex  flex-col px-6 py-6 pb-[20vh]  gap-2 mt-[-15vh]">
+    
+    {(messages.length>0)&&
+    <div className="w-[40vw] overflow-y-auto no-scrollbar flex-1  pb-10 ">
+      
+      {
+        messages.map((item,index)=>(
+          <div key={index}>
+            <p className={`w-fit px-4 py-2 rounded-lg 
+  ${item.role==="user" ? "bg-gray-700 ml-auto" : ""}
+`}>
+  {item.message}
+</p>
+          </div>
+        ))
+      }
+         {loader2 && (
+  <div className="flex my-2">
+    <div className="bg-gray-800 px-4 py-2 rounded-lg w-fit flex gap-1">
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+    </div>
+  </div>
+)}
+         <div className="pb-[15vh]" ref={messagesRef}></div>
+
+    </div>
+   
+    
+      
+    }
+  
+
+  <div className="fixed bottom-10 left-0 w-full flex justify-center">
+   
+  </div>
+   </div>
+
+   {
     (!loader && fileUploaded) &&
 
     <div className="fixed bottom-10 left-0 w-full flex justify-center">
@@ -109,38 +183,6 @@ export default function Home() {
       placeholder="Ask your question here" type="text" name="" id="" />
     </div>
    }
-   </div>
-   <div className="mt-[-15vh]">
-    
-    {(messages.length>0)&&
-    <div className="w-[40vw] flex flex-col gap-2">
-      
-      {
-        messages.map((item,index)=>(
-          <div key={index}>
-            <p className={`w-fit px-4 py-2 rounded-lg 
-  ${item.role==="user" ? "bg-gray-700 ml-auto" : ""}
-`}>
-  {item.message}
-</p>
-          </div>
-        ))
-      }
-
-    </div>
-      
-    }
-   </div>
-   {loader2 && (
-  <div className="flex my-2">
-    <div className="bg-gray-800 px-4 py-2 rounded-lg w-fit flex gap-1">
-      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-    </div>
-  </div>
-)}
-
   </div>
   );
 }
