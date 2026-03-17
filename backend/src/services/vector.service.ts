@@ -1,8 +1,5 @@
-
-
 import { QdrantClient } from "@qdrant/js-client-rest";
-import OpenAI from "openai";
-
+import {  v4 as uuid } from "uuid";
 const qdrant= new QdrantClient({
     url:"http://localhost:6333"
 })
@@ -29,7 +26,7 @@ export async function storeEmbeddinngs(embeddings: any[]){
    try {
      await qdrant.upsert("documents",{
          points: embeddings.map((item,index)=>({
-             id:index,
+             id:uuid(),
              payload:{
                  text:item.text,
                  page: item.page,
@@ -45,13 +42,27 @@ export async function storeEmbeddinngs(embeddings: any[]){
 }
 
 
-export async function searchEmbeddings(vector:number[]){
+export async function searchEmbeddings(vector:number[],fileName:string){
  
-
-    const searchResults= await qdrant.search("documents",{
+    const searchOptions:any= {
         vector,
         limit:5
-    })
 
+    }
+
+   
+   
+    if(fileName.length >0){
+        
+        searchOptions.filter ={
+            must:[
+                {
+                    key:"fileName",
+                    match:{value:fileName}
+                }
+            ]
+        }
+    }
+    const searchResults= await qdrant.search("documents",searchOptions);
     return searchResults;
 }

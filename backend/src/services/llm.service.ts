@@ -4,11 +4,15 @@ import { Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();
 
+interface Sources{
+    fileName:String;
+    page:number
+}
 const openai= new OpenAI({
     apiKey:process.env.OPENAI_API_KEY!
 })
 
-export async function answerQuery(context:string,question:string,res: Response){
+export async function answerQuery(context:string,question:string,res: Response,sources:Sources){
 
 
     const response= await openai.chat.completions.create({
@@ -20,11 +24,7 @@ export async function answerQuery(context:string,question:string,res: Response){
                 You are a helpful AI assistant which helps in answering questions
                 Answer the question based on context provided. Don't show "\n" and "\n\n" in the respose as it is just a line separation.
                 
-                Also the pages from which these context and the document name is given for every  context take them and give them in the last list as below example:
                 Example output:
-                "Document name: Rishab.pdf
-                Source: Page3
-                Rishab Pant is born in Uttarakand,India"
                 If any information is asked which is not related to contest, respond with:
                 "I could not find answer in the document"
                 Be concise and clear 
@@ -50,7 +50,10 @@ export async function answerQuery(context:string,question:string,res: Response){
         res.write(token)
 
     }
-    
+
+    res.write("\n__SOURCES__\n")
+
+    res.write(JSON.stringify(sources))
     res.end();
     
 }

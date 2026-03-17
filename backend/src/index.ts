@@ -38,6 +38,7 @@ app.post("/upload",upload.array("files"),async (req,res)=>{
       }
   
       for(const file of files){
+      
       const pdfBuffer= fs.readFileSync(file.path);
       const pdfData=await pdfParse(pdfBuffer);
       const splitter= new RecursiveCharacterTextSplitter({chunkSize:1000,chunkOverlap:200});
@@ -76,7 +77,14 @@ app.post("/query",async (req,res)=>{
         return;
     }
     const embeddingsResponse= await questionEmbeddings(data.question);
-    const searchResults=  await searchEmbeddings(embeddingsResponse.data[0].embedding);
+    let searchResults;
+    if(data.fileName){
+        searchResults=  await searchEmbeddings(embeddingsResponse.data[0].embedding,data.fileName);
+    }
+    else{
+        searchResults=await searchEmbeddings(embeddingsResponse.data[0].embedding,"");
+    }
+    
 
     if(!searchResults){
         res.json({
@@ -85,13 +93,14 @@ app.post("/query",async (req,res)=>{
         return;
     }
   
-    const context= searchResults.slice(0,3).map((r,i) => `Source ${i+1} Doccument Name: ${r.payload?.fileName} \n 
-    Page ${r.payload?.page}: \n
-    ${r.payload?.text}`).join("\n\n")
-
+    const context= searchResults.slice(0,3).map((r,i:number) => `Source ${i+1} ${r.payload?.text}`).join("\n\n")
+    const sources={
+        fileName:searchResults[0].payload?.fileName as string,
+        page: searchResults[0].payload?.page as number
+    }
    
     
-    const answer= await answerQuery(context,data.question,res);
+    const answer= await answerQuery(context,data.question,res,sources);
   
 })
 

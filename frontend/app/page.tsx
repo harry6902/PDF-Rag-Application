@@ -5,7 +5,12 @@ import axios from "axios";
 
 interface MessageType{
   role:"user" | "assistant";
-  message: string
+  message: string;
+  source?: Sources
+}
+interface Sources{
+    fileName: string;
+    page:number
 }
 export default function Home() {
 
@@ -19,13 +24,17 @@ export default function Home() {
   const [answer,setAnswer]= useState("");
   const [loader2,setLoader2]= useState(false);
   const [messages,setMessages]= useState<MessageType[]>([]);
+  const [filenames,setFileNames]=useState<string[]>([]);
+  const [selectedFile,setSelectedFile]= useState("");
+  
   
   useEffect(() => {
-      
+    console.log(messages);
     messagesRef.current?.scrollIntoView({behavior:"smooth",block:"end"})
   }, [messages])
   
   
+
   function handleUploadFile(){
  
     if(!fileRef.current){
@@ -44,25 +53,47 @@ export default function Home() {
       headers:{
         "Content-Type":"application/json"
       },
-      body: JSON.stringify({question})
+      body: JSON.stringify({question,selectedFile})
     })
 
     const reader=response.body?.getReader();
     const decoder= new TextDecoder();
     let result="";
+    let sources1:Sources={fileName:"",page:NaN};
     while(true){
       const {done,value}=await reader!.read();
       if(done)break;
       const chunk=decoder.decode(value);
-      result+=chunk;
+      if(chunk.includes("__SOURCES__")){
+        const [ans,src]=chunk.split("__SOURCES__")
+          result+=ans;
+        try{
+          sources1=JSON.parse(src)
+        }catch{}}
+        else{
+           result+=chunk;
+        }
+      // if(sources1.fileName!==""){
+
+      
+      //   setMessages((prev)=>{
+      //       const last=prev[prev.length-1];
+      //       last.source=sources1;
+      //       return [...prev]
+      //   })
+
+      // }
       setMessages((prev)=>{
         const last= prev[prev.length-1];
         if(last?.role==="assistant"){
           last.message=result;
+          last.source=sources1;
           return [...prev];
         }
         return [...prev,{role:"assistant",message:result}]
       })
+      
+      
     }
    
     // setMessages((prev)=>[...prev,{role:"assistant",message:response.data.answer}])
@@ -73,6 +104,7 @@ export default function Home() {
   setShowAnswer(true);
   
 
+  
   }
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>){
@@ -84,6 +116,7 @@ export default function Home() {
    
     const formData= new FormData();
   for(const file of files){
+    setFileNames((prev)=>([...prev,file.name]));
     formData.append("files",file);
   }
    
@@ -101,20 +134,41 @@ export default function Home() {
   <div className="flex flex-col gap-10 items-center">
 
     <input ref={fileRef} multiple onChange={(e)=>handleFile(e)} className="hidden" type="file" name="file" id="actualbutton" />
-    <div  onClick={handleUploadFile}  className={"flex justify-center items-center gap-4 cursor-pointer mt-[20vh]"} id="proxybutton">
-    <div className={"h-12 w-12"+(fileUploaded  ? 'mt-[-20vh]':'')}>
-    <svg viewBox="0 0 24 24" fill="white">
-    <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM13 9V3.5L18.5 9H13Z"/>
-  </svg>
-  </div>
+    <div   className={"flex justify-center items-center gap-4 mt-[20vh]"} id="proxybutton">
+   
     {(!loader && !fileUploaded) &&
-    <div className="font-bold">
+    <div onClick={handleUploadFile}  className="flex justify-center items-center gap-2 cursor-pointer">
+       <input hidden ref={fileRef} multiple onChange={(e)=>handleFile(e)} className="hidden" type="file" name="file" id="actualbutton" />
+       <div className={"h-12 w-12"}>
+       <svg viewBox="0 0 24 24" fill="white">
+       <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM13 9V3.5L18.5 9H13Z"/>
+     </svg>
+     </div>
+    <div className="font-bold cursor-pointer">
       Click here to upload File
       </div>
+      
+     </div>
    }
    {(!loader && fileUploaded) &&
-    <div className="font-bold mt-[-30vh]">
-      File Uploaded Successfully!!! Ask Your questions
+
+    // <div>File/Files Uplaoded sucessfully</div>
+    <div className="flex flex-col gap-3 text-white">
+         
+       <div className="font-bold">
+       File/Files Uploaded Successfully!!! Below are the files
+       </div>
+
+       <div>
+        {
+          filenames.map((item,index)=>(
+            <div onClick={()=>setSelectedFile(item)} key={index} className={(selectedFile===item?'bg-gray-700':'') +` p-2 flex cursor-pointer`}>
+             <p>{item}</p>
+            </div>
+          ))
+        }
+       </div>
+ 
       </div>
    }
    {(loader) &&
@@ -129,9 +183,10 @@ export default function Home() {
   <div>
 
    </div>
-   <div    className="h-screen flex  flex-col px-6 py-6 pb-[20vh]  gap-2 mt-[-15vh]">
+  
     
     {(messages.length>0)&&
+     <div    className="flex  flex-col px-6 py-6 pb-[20vh] gap-2 mt-[-8vh]">
     <div className="w-[40vw] overflow-y-auto no-scrollbar flex-1  pb-10 ">
       
       {
@@ -142,6 +197,13 @@ export default function Home() {
 `}>
   {item.message}
 </p>
+         {item.source &&
+         <div>
+         <div className="w-fit px-4 py-2 rounded-lg">
+         📄 {item.source.fileName} - Page{item.source.page}
+         </div>
+         </div>
+         }
           </div>
         ))
       }
@@ -159,14 +221,14 @@ export default function Home() {
     </div>
    
     
-      
+    </div> 
     }
   
 
   <div className="fixed bottom-10 left-0 w-full flex justify-center">
    
   </div>
-   </div>
+   
 
    {
     (!loader && fileUploaded) &&
