@@ -84,14 +84,24 @@ export default function Home() {
 
       // }
       setMessages((prev)=>{
-        const last= prev[prev.length-1];
-        if(last?.role==="assistant"){
-          last.message=result;
-          last.source=sources1;
-          return [...prev];
+        const updated = [...prev];
+      
+        const last = updated[updated.length - 1];
+      
+        if (last?.role === "assistant") {
+          updated[updated.length - 1] = {
+            ...last,
+            message: result,
+            source: sources1
+          };
+          return updated;
         }
-        return [...prev,{role:"assistant",message:result}]
-      })
+      
+        return [
+          ...updated,
+          { role: "assistant", message: result, source: sources1 }
+        ];
+      });
       
       
     }
