@@ -1,7 +1,8 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import {  v4 as uuid } from "uuid";
 const qdrant= new QdrantClient({
-    url:"http://localhost:6333"
+    url:process.env.QDRANTDB_URL,
+    apiKey: process.env.QDRANTDB_APIKEY
 })
 
 export async function initVectorDB(){
