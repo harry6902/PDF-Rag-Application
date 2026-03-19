@@ -48,7 +48,7 @@ export default function Home() {
     setLoader2(true);
     setMessages((prev)=>[...prev,{role:"user",message:question}]);
     setQuestion("");
-    const response= await fetch("http://localhost:5000/query",{
+    const response= await fetch(`${process.env.NEXT_PUBLIC_BACKEND_DOMAIN}/query`,{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
@@ -113,7 +113,7 @@ export default function Home() {
     if(!files){
       return;
     }
-   
+    console.log("DOMAIN:", process.env.NEXT_PUBLIC_BACKEND_DOMAIN);
     const formData= new FormData();
   for(const file of files){
     setFileNames((prev)=>([...prev,file.name]));
@@ -121,7 +121,7 @@ export default function Home() {
   }
    
 
-    const response= await axios.post("http://localhost:5000/upload",formData);
+    const response= await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_DOMAIN}/upload`,formData);
     setFileUploaded(true);
     setLoader(false);
 
@@ -187,7 +187,7 @@ export default function Home() {
     
     {(messages.length>0)&&
      <div    className="flex  flex-col px-6 py-6 pb-[20vh] gap-2 mt-[-8vh]">
-    <div className="w-[40vw] overflow-y-auto no-scrollbar flex-1  pb-10 ">
+    <div className="w-full  lg:w-[40vw] overflow-y-auto no-scrollbar flex-1  pb-10 ">
       
       {
         messages.map((item,index)=>(
@@ -234,7 +234,7 @@ export default function Home() {
     (!loader && fileUploaded) &&
 
     <div className="fixed bottom-10 left-0 w-full flex justify-center">
-      <input className="text-gray-300 bg-gray-700 w-[30vw] h-10 p-3"
+      <input className="text-gray-300 bg-gray-700 w-[80vw] lg:w-[30vw] h-10 p-3"
       value={question}
       onKeyDown={(e)=>{
         if(e.key==="Enter"){
