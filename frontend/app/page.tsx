@@ -197,7 +197,7 @@ export default function Home() {
 `}>
   {item.message}
 </p>
-         {item.source &&
+         {   item.source?.fileName.length !== undefined&&   item.source?.fileName.length >0 &&
          <div>
          <div className="w-fit px-4 py-2 rounded-lg">
          📄 {item.source.fileName} - Page{item.source.page}
