@@ -36,8 +36,13 @@ app.post("/upload",upload.array("files"),async (req,res)=>{
           res.status(400).json({message:"No file uploaded"})
           return;
       }
-  
+      let i=1;
       for(const file of files){
+      
+        
+      const id=req.body[`file${i}`]
+      i++; 
+    
       
       const pdfBuffer= fs.readFileSync(file.path);
       const pdfData=await pdfParse(pdfBuffer);
@@ -47,7 +52,7 @@ app.post("/upload",upload.array("files"),async (req,res)=>{
         [pdfData.text],
         [{page:1}]
       )
-      const embeddings= await generateEmbedding(chunks,file.originalname);
+      const embeddings= await generateEmbedding(chunks,id,file.originalname);
  
       await storeEmbeddinngs(embeddings);
       }
@@ -67,7 +72,6 @@ app.post("/upload",upload.array("files"),async (req,res)=>{
 
 
 app.post("/query",async (req,res)=>{
-
     const {success,data}= queryBody.safeParse(req.body);
     if(!success){
         res.status(411)
@@ -77,13 +81,12 @@ app.post("/query",async (req,res)=>{
         return;
     }
     const embeddingsResponse= await questionEmbeddings(data.question);
+    if(data.fieldIds===undefined)return;
     let searchResults;
-    if(data.fileName){
-        searchResults=  await searchEmbeddings(embeddingsResponse.data[0].embedding,data.fileName);
-    }
-    else{
-        searchResults=await searchEmbeddings(embeddingsResponse.data[0].embedding,"");
-    }
+        
+
+        searchResults=await searchEmbeddings(embeddingsResponse.data[0].embedding,data.fieldIds);
+    
     
 
     if(!searchResults){
@@ -98,6 +101,8 @@ app.post("/query",async (req,res)=>{
         fileName:searchResults[0].payload?.fileName as string,
         page: searchResults[0].payload?.page as number
     }
+
+ 
    
     
     const answer= await answerQuery(context,data.question,res,sources);

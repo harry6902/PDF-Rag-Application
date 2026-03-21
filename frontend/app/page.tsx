@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useState, useRef, useEffect } from "react";
 import axios from "axios";
+import {v4 as uuidv4} from "uuid";
 
 interface MessageType{
   role:"user" | "assistant";
@@ -11,6 +12,11 @@ interface MessageType{
 interface Sources{
     fileName: string;
     page:number
+}
+
+interface FileType{
+  fileName: string;
+  fileId:string
 }
 export default function Home() {
 
@@ -24,8 +30,8 @@ export default function Home() {
   const [answer,setAnswer]= useState("");
   const [loader2,setLoader2]= useState(false);
   const [messages,setMessages]= useState<MessageType[]>([]);
-  const [filenames,setFileNames]=useState<string[]>([]);
-  const [selectedFile,setSelectedFile]= useState("");
+  const [filenames,setFileNames]=useState<FileType[]>([]);
+  const [selectedFile,setSelectedFile]= useState<FileType>();
   
   
   useEffect(() => {
@@ -48,12 +54,21 @@ export default function Home() {
     setLoader2(true);
     setMessages((prev)=>[...prev,{role:"user",message:question}]);
     setQuestion("");
+    let selectedFiles:string[]=[];
+    if(!selectedFile){
+      for(const file of filenames){
+        selectedFiles.push(file.fileId);
+      }
+    }
+    else{
+      selectedFiles=[selectedFile.fileId]
+    }
     const response= await fetch(`${process.env.NEXT_PUBLIC_BACKEND_DOMAIN}/query`,{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
       },
-      body: JSON.stringify({question,selectedFile})
+      body: JSON.stringify({question,fieldIds:selectedFiles})
     })
 
     const reader=response.body?.getReader();
@@ -125,9 +140,13 @@ export default function Home() {
     }
     console.log("DOMAIN:", process.env.NEXT_PUBLIC_BACKEND_DOMAIN);
     const formData= new FormData();
+    let i=1;
   for(const file of files){
-    setFileNames((prev)=>([...prev,file.name]));
+    const id=uuidv4();
+    setFileNames((prev)=>([...prev,{fileName:file.name,fileId:id}]));
     formData.append("files",file);
+    formData.append(`file${i}`,id);
+    i++;
   }
    
 
@@ -172,8 +191,8 @@ export default function Home() {
        <div>
         {
           filenames.map((item,index)=>(
-            <div onClick={()=>setSelectedFile(item)} key={index} className={(selectedFile===item?'bg-gray-700':'') +` p-2 flex cursor-pointer`}>
-             <p>{item}</p>
+            <div onClick={()=>setSelectedFile({fileId:item.fileId,fileName:item.fileName})} key={index} className={(selectedFile?.fileId===item.fileId?'bg-gray-700':'') +` p-2 flex cursor-pointer`}>
+             <p>{item.fileName}</p>
             </div>
           ))
         }

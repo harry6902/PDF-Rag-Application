@@ -8,8 +8,8 @@ const openai= new OpenAI({
     apiKey: process.env.OPENAI_API_KEY!
 })
 
-export async function generateEmbedding(chunks:Document<Record<string, any>>[],fileName: string){
-    const uuid= randomUUID()
+export async function generateEmbedding(chunks:Document<Record<string, any>>[],id: string,fileName:string){
+   
     const embeddings=await Promise.all( 
     chunks.map(async (chunk)=>{
         const response=await openai.embeddings.create({
@@ -21,8 +21,8 @@ export async function generateEmbedding(chunks:Document<Record<string, any>>[],f
             embedding:response.data[0].embedding,
             text:chunk.pageContent,
             page:chunk.metadata.page,
-            documentID: uuid,
-            fileName
+            documentID: id,
+            fileName:fileName
         }
     })
 );

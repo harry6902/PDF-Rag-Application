@@ -31,7 +31,8 @@ export async function storeEmbeddinngs(embeddings: any[]){
              payload:{
                  text:item.text,
                  page: item.page,
-                 fileName: item.fileName
+                 documentID: item.documentID,
+                 fileName:item.fileName
              },
              vector:item.embedding
          }
@@ -43,27 +44,30 @@ export async function storeEmbeddinngs(embeddings: any[]){
 }
 
 
-export async function searchEmbeddings(vector:number[],fileName:string){
+export async function searchEmbeddings(vector:number[],fieldIds:string[]){
  
-    const searchOptions:any= {
+    let searchOptions:any= {
         vector,
-        limit:5
+        limit:5,
+        with_payload:true,
+        with_vector: false
 
     }
 
    
    
-    if(fileName.length >0){
+  
         
         searchOptions.filter ={
             must:[
-                {
-                    key:"fileName",
-                    match:{value:fileName}
-                }
+             
             ]
         }
-    }
+        fieldIds.forEach((id)=>(
+            searchOptions.filter.must.push({key:"documentID",match:{value:id}})
+        ))
+
+    
     const searchResults= await qdrant.search("documents",searchOptions);
     return searchResults;
 }
