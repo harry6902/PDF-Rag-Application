@@ -58,22 +58,30 @@ export async function searchEmbeddings(vector:number[],fieldIds:string[]){
    
     if (fieldIds.length === 1) {
         searchOptions.filter = {
-            must: [{ key: "documentID", match: { value: fieldIds[0] } }]
+            must: [{
+                key: "documentID",
+                match: { value: fieldIds[0] }
+            }]
         };
     } else {
-      
         searchOptions.filter = {
-            should: fieldIds.map((id) => ({
+            must: [{
                 key: "documentID",
-                match: { value: id }
-            }))
+                match: { any: fieldIds }  // ✅ use "any" instead of should
+            }]
         };
     }
-  
         
     
-
-    
-    const searchResults= await qdrant.search("documents",searchOptions);
-    return searchResults;
+  
+    try {
+        const searchResults= await qdrant.search("documents",searchOptions);
+        return searchResults;
+    } catch (error) {
+        console.log("error in search");
+        console.log(error);
+        
+    }
+   
+   
 }
