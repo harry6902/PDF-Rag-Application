@@ -215,7 +215,7 @@ export default function Home() {
   
     
     {(messages.length>0)&&
-     <div    className="flex  flex-col px-6 py-6 pb-[20vh] gap-2 mt-[-8vh]">
+     <div    className="flex  flex-col mx-[-10vw] w-full lg:w-fit px-2  lg:px-6 py-6 pb-[20vh] gap-2 mt-[-8vh]">
     <div className="w-full  lg:w-[40vw] overflow-y-auto no-scrollbar flex-1  pb-10 ">
       
       {
