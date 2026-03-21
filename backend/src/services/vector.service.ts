@@ -19,6 +19,16 @@ export async function initVectorDB(){
         })
     }
 
+    try {
+        
+        await qdrant.createPayloadIndex("documents",{
+            field_name:"documentID",
+            field_schema:"keyword"
+        })
+    } catch (error) {
+         console.log("Field already exists");
+    }
+
 
 }
 
@@ -56,21 +66,21 @@ export async function searchEmbeddings(vector:number[],fieldIds:string[]){
 
    
    
-    // if (fieldIds.length === 1) {
-    //     searchOptions.filter = {
-    //         must: [{
-    //             key: "documentID",
-    //             match: { value: fieldIds[0] }
-    //         }]
-    //     };
-    // } else {
-    //     searchOptions.filter = {
-    //         must: [{
-    //             key: "documentID",
-    //             match: { any: fieldIds }  // ✅ use "any" instead of should
-    //         }]
-    //     };
-    // }
+    if (fieldIds.length === 1) {
+        searchOptions.filter = {
+            must: [{
+                key: "documentID",
+                match: { value: fieldIds[0] }
+            }]
+        };
+    } else {
+        searchOptions.filter = {
+            must: [{
+                key: "documentID",
+                match: { any: fieldIds } 
+            }]
+        };
+    }
         
     
   
