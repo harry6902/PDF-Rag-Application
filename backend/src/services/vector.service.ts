@@ -49,28 +49,28 @@ export async function searchEmbeddings(vector:number[],fieldIds:string[]){
     let searchOptions:any= {
         vector,
         limit:5,
-        with_payload:true,
-        with_vector: false
+        // with_payload:true,
+        // with_vector: false
 
     }
 
    
    
-    if (fieldIds.length === 1) {
-        searchOptions.filter = {
-            must: [{
-                key: "documentID",
-                match: { value: fieldIds[0] }
-            }]
-        };
-    } else {
-        searchOptions.filter = {
-            must: [{
-                key: "documentID",
-                match: { any: fieldIds }  // ✅ use "any" instead of should
-            }]
-        };
-    }
+    // if (fieldIds.length === 1) {
+    //     searchOptions.filter = {
+    //         must: [{
+    //             key: "documentID",
+    //             match: { value: fieldIds[0] }
+    //         }]
+    //     };
+    // } else {
+    //     searchOptions.filter = {
+    //         must: [{
+    //             key: "documentID",
+    //             match: { any: fieldIds }  // ✅ use "any" instead of should
+    //         }]
+    //     };
+    // }
         
     
   
