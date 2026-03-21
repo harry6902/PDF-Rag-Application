@@ -56,16 +56,22 @@ export async function searchEmbeddings(vector:number[],fieldIds:string[]){
 
    
    
+    if (fieldIds.length === 1) {
+        searchOptions.filter = {
+            must: [{ key: "documentID", match: { value: fieldIds[0] } }]
+        };
+    } else {
+      
+        searchOptions.filter = {
+            should: fieldIds.map((id) => ({
+                key: "documentID",
+                match: { value: id }
+            }))
+        };
+    }
   
         
-        searchOptions.filter ={
-            must:[
-             
-            ]
-        }
-        fieldIds.forEach((id)=>(
-            searchOptions.filter.must.push({key:"documentID",match:{value:id}})
-        ))
+    
 
     
     const searchResults= await qdrant.search("documents",searchOptions);
