@@ -72,6 +72,7 @@ app.post("/upload",upload.array("files"),async (req,res)=>{
 
 
 app.post("/query",async (req,res)=>{
+    console.log(req.body);
     const {success,data}= queryBody.safeParse(req.body);
     if(!success){
         res.status(411)
@@ -80,6 +81,7 @@ app.post("/query",async (req,res)=>{
         })
         return;
     }
+    console.log(data);
     const embeddingsResponse= await questionEmbeddings(data.question);
     if(data.fieldIds===undefined)return;
     let searchResults;
